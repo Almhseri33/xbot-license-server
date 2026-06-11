@@ -17,7 +17,31 @@ from functools import wraps
 # استيراد نظام التشفير
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from license_system.encryption import DataEncryption
+# Encryption inline
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.backends import default_backend
+import base64
+
+class DataEncryption:
+    def __init__(self, master_key=None):
+        if master_key is None:
+            master_key = b"XBotManager2026SecretKey!@#$"
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=b"x_bot_salt_2026",
+            iterations=100000,
+            backend=default_backend()
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(master_key))
+        self.cipher = Fernet(key)
+    
+    def decrypt_data(self, encrypted_data):
+        encrypted = base64.b64decode(encrypted_data.encode('utf-8'))
+        decrypted = self.cipher.decrypt(encrypted)
+        return json.loads(decrypted.decode('utf-8'))
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)  # مفتاح سري للـ sessions
