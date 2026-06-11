@@ -11,23 +11,33 @@ import sqlite3
 import hashlib
 import secrets
 import os
+import json
+import base64
 from datetime import datetime, timedelta
 from functools import wraps
-
-# استيراد نظام التشفير
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-# Encryption inline
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
-import base64
+
+
+# ============================================================
+# نظام التشفير (Inlined - Complete Version)
+# ============================================================
 
 class DataEncryption:
+    """تشفير البيانات بـ AES-256"""
+    
     def __init__(self, master_key=None):
+        """
+        master_key: المفتاح الأساسي (32 byte)
+        إذا لم يتم تحديده، سيتم استخدام المفتاح الافتراضي
+        """
         if master_key is None:
+            # المفتاح الافتراضي - يجب تغييره في الإنتاج!
             master_key = b"XBotManager2026SecretKey!@#$"
+        
+        # توليد مفتاح Fernet من المفتاح الأساسي
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
@@ -38,10 +48,75 @@ class DataEncryption:
         key = base64.urlsafe_b64encode(kdf.derive(master_key))
         self.cipher = Fernet(key)
     
+    def encrypt_data(self, data):
+        """
+        تشفير البيانات
+        
+        Args:
+            data: dict أو list - البيانات المراد تشفيرها
+        
+        Returns:
+            str: النص المشفر (base64)
+        """
+        try:
+            # تحويل البيانات إلى JSON
+            json_data = json.dumps(data, ensure_ascii=False)
+            
+            # تشفير
+            encrypted = self.cipher.encrypt(json_data.encode('utf-8'))
+            
+            # تحويل إلى base64 لسهولة النقل
+            return base64.b64encode(encrypted).decode('utf-8')
+        except Exception as e:
+            raise Exception(f"فشل التشفير: {e}")
+    
     def decrypt_data(self, encrypted_data):
-        encrypted = base64.b64decode(encrypted_data.encode('utf-8'))
-        decrypted = self.cipher.decrypt(encrypted)
-        return json.loads(decrypted.decode('utf-8'))
+        """
+        فك تشفير البيانات
+        
+        Args:
+            encrypted_data: str - النص المشفر (base64)
+        
+        Returns:
+            dict أو list: البيانات الأصلية
+        """
+        try:
+            # فك base64
+            encrypted = base64.b64decode(encrypted_data.encode('utf-8'))
+            
+            # فك التشفير
+            decrypted = self.cipher.decrypt(encrypted)
+            
+            # تحويل من JSON
+            return json.loads(decrypted.decode('utf-8'))
+        except Exception as e:
+            raise Exception(f"فشل فك التشفير: {e}")
+    
+    def encrypt_accounts(self, accounts):
+        """
+        تشفير قائمة الحسابات بشكل خاص
+        (يزيل معلومات حساسة غير ضرورية)
+        
+        Args:
+            accounts: list - قائمة الحسابات من accounts.json
+        
+        Returns:
+            str: البيانات المشفرة
+        """
+        # استخراج المعلومات المهمة فقط
+        clean_accounts = []
+        for acc in accounts:
+            clean_accounts.append({
+                'id': acc.get('id', ''),
+                'name': acc.get('name', ''),
+                'username': acc.get('username', ''),
+                'password': acc.get('password', ''),  # 🔥 المهم!
+                'profile': acc.get('profile', ''),
+                'bot_mode': acc.get('bot_mode', 'exchange'),
+                'default_tweet': acc.get('default_tweet', '')
+            })
+        
+        return self.encrypt_data(clean_accounts)
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)  # مفتاح سري للـ sessions
