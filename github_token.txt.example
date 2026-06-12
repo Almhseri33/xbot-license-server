@@ -1,0 +1,10 @@
+YOUR_GITHUB_TOKEN_HERE
+
+# كيف تحصل على GitHub Token:
+# 1. GitHub → Settings
+# 2. Developer settings
+# 3. Personal access tokens → Tokens (classic)
+# 4. Generate new token
+# 5. اختر: repo (كامل)
+# 6. انسخ Token وضعه هنا
+# 7. احفظ الملف باسم: github_token.txt (بدون .example)

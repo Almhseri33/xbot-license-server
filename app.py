@@ -137,6 +137,11 @@ ADMIN_USERNAME = 'admin'
 ADMIN_PASSWORD_HASH = hashlib.sha256('admin123'.encode()).hexdigest()  # غيّر كلمة السر!
 ENCRYPTION = DataEncryption()
 
+# إعدادات GitHub للحظر
+GITHUB_USERNAME = 'Almhseri33'
+GITHUB_REPO = 'xbot-license-server'
+GITHUB_TOKEN = ''  # سيتم تحميله من ملف أو متغيرات البيئة
+
 
 # ============================================================
 # قاعدة البيانات
@@ -518,13 +523,24 @@ def admin_dashboard():
     
     conn.close()
     
+    # جلب القائمة السوداء
+    blacklist = get_blacklist_from_github()
+    blocked_ids = blacklist.get("blocked_hardware_ids", [])
+    
+    # إضافة معلومة الحظر لكل ترخيص
+    licenses_with_block_info = []
+    for license in licenses:
+        license_dict = dict(license)
+        license_dict['is_blocked'] = license_dict.get('hardware_id') in blocked_ids
+        licenses_with_block_info.append(license_dict)
+    
     return render_template_string(
         DASHBOARD_TEMPLATE,
         total_licenses=total_licenses,
         active_licenses=active_licenses,
         total_syncs=total_syncs,
         recent_syncs=recent_syncs,
-        licenses=licenses
+        licenses=licenses_with_block_info
     )
 
 
@@ -594,6 +610,245 @@ def create_license():
 
 
 # ============================================================
+# نظام الحظر (Kill Switch Integration)
+# ============================================================
+
+def load_github_token():
+    """تحميل GitHub Token من ملف أو متغيرات البيئة"""
+    global GITHUB_TOKEN
+    
+    # محاولة من متغيرات البيئة
+    if os.environ.get('GITHUB_TOKEN'):
+        GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
+        return True
+    
+    # محاولة من ملف
+    token_file = 'github_token.txt'
+    if os.path.exists(token_file):
+        try:
+            with open(token_file, 'r') as f:
+                GITHUB_TOKEN = f.read().strip()
+            return True
+        except:
+            pass
+    
+    return False
+
+
+def get_blacklist_from_github():
+    """جلب blacklist.json من GitHub"""
+    try:
+        import requests
+        
+        url = f"https://raw.githubusercontent.com/{GITHUB_USERNAME}/{GITHUB_REPO}/main/blacklist.json"
+        response = requests.get(url, timeout=10)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"blocked_hardware_ids": [], "last_updated": "", "notes": ""}
+    except Exception as e:
+        print(f"Error fetching blacklist: {e}")
+        return {"blocked_hardware_ids": [], "last_updated": "", "notes": ""}
+
+
+def update_blacklist_on_github(blacklist_data):
+    """تحديث blacklist.json على GitHub"""
+    try:
+        import requests
+        
+        if not GITHUB_TOKEN:
+            raise Exception("GitHub Token not configured")
+        
+        # رابط API
+        api_url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{GITHUB_REPO}/contents/blacklist.json"
+        
+        headers = {
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        
+        # جلب SHA الحالي
+        response = requests.get(api_url, headers=headers)
+        sha = None
+        if response.status_code == 200:
+            sha = response.json()["sha"]
+        
+        # تحويل المحتوى لـ base64
+        content = json.dumps(blacklist_data, indent=2, ensure_ascii=False)
+        content_bytes = content.encode('utf-8')
+        content_base64 = base64.b64encode(content_bytes).decode('utf-8')
+        
+        # تحديث الملف
+        data = {
+            "message": f"Update blacklist - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            "content": content_base64,
+        }
+        
+        if sha:
+            data["sha"] = sha
+        
+        response = requests.put(api_url, headers=headers, json=data)
+        
+        if response.status_code in [200, 201]:
+            return True
+        else:
+            raise Exception(f"HTTP {response.status_code}: {response.text}")
+    
+    except Exception as e:
+        print(f"Error updating blacklist: {e}")
+        return False
+
+
+def is_hardware_blocked(hardware_id):
+    """التحقق إذا Hardware ID محظور"""
+    blacklist = get_blacklist_from_github()
+    return hardware_id in blacklist.get("blocked_hardware_ids", [])
+
+
+@app.route('/admin/block_user/<license_key>', methods=['POST'])
+@admin_required
+def block_user(license_key):
+    """حظر مستخدم"""
+    try:
+        # جلب Hardware ID من قاعدة البيانات
+        conn = get_db()
+        c = conn.cursor()
+        c.execute('SELECT hardware_id FROM licenses WHERE license_key = ?', (license_key,))
+        result = c.fetchone()
+        conn.close()
+        
+        if not result or not result['hardware_id']:
+            return jsonify({
+                'success': False,
+                'message': 'Hardware ID not found. User must activate license first.'
+            }), 400
+        
+        hardware_id = result['hardware_id']
+        
+        # جلب القائمة الحالية
+        blacklist = get_blacklist_from_github()
+        blocked_ids = blacklist.get("blocked_hardware_ids", [])
+        
+        # التحقق إذا محظور مسبقاً
+        if hardware_id in blocked_ids:
+            return jsonify({
+                'success': False,
+                'message': 'User already blocked'
+            }), 400
+        
+        # إضافة للقائمة
+        blocked_ids.append(hardware_id)
+        blacklist["blocked_hardware_ids"] = blocked_ids
+        blacklist["last_updated"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # رفع لـ GitHub
+        if update_blacklist_on_github(blacklist):
+            log_activity(license_key, 'blocked', request.remote_addr, f'HW: {hardware_id[:16]}...')
+            return jsonify({
+                'success': True,
+                'message': 'User blocked successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to update blacklist on GitHub'
+            }), 500
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
+@app.route('/admin/unblock_user/<license_key>', methods=['POST'])
+@admin_required
+def unblock_user(license_key):
+    """رفع الحظر عن مستخدم"""
+    try:
+        # جلب Hardware ID
+        conn = get_db()
+        c = conn.cursor()
+        c.execute('SELECT hardware_id FROM licenses WHERE license_key = ?', (license_key,))
+        result = c.fetchone()
+        conn.close()
+        
+        if not result or not result['hardware_id']:
+            return jsonify({
+                'success': False,
+                'message': 'Hardware ID not found'
+            }), 400
+        
+        hardware_id = result['hardware_id']
+        
+        # جلب القائمة
+        blacklist = get_blacklist_from_github()
+        blocked_ids = blacklist.get("blocked_hardware_ids", [])
+        
+        # التحقق إذا محظور
+        if hardware_id not in blocked_ids:
+            return jsonify({
+                'success': False,
+                'message': 'User is not blocked'
+            }), 400
+        
+        # حذف من القائمة
+        blocked_ids.remove(hardware_id)
+        blacklist["blocked_hardware_ids"] = blocked_ids
+        blacklist["last_updated"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # رفع لـ GitHub
+        if update_blacklist_on_github(blacklist):
+            log_activity(license_key, 'unblocked', request.remote_addr, f'HW: {hardware_id[:16]}...')
+            return jsonify({
+                'success': True,
+                'message': 'User unblocked successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to update blacklist on GitHub'
+            }), 500
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
+@app.route('/admin/blacklist')
+@admin_required
+def view_blacklist():
+    """عرض القائمة السوداء"""
+    blacklist = get_blacklist_from_github()
+    blocked_ids = blacklist.get("blocked_hardware_ids", [])
+    last_updated = blacklist.get("last_updated", "N/A")
+    
+    # جلب معلومات المستخدمين المحظورين
+    conn = get_db()
+    c = conn.cursor()
+    
+    blocked_users = []
+    for hw_id in blocked_ids:
+        c.execute('SELECT * FROM licenses WHERE hardware_id = ?', (hw_id,))
+        result = c.fetchone()
+        if result:
+            blocked_users.append(dict(result))
+    
+    conn.close()
+    
+    return render_template_string(
+        BLACKLIST_TEMPLATE,
+        blocked_count=len(blocked_ids),
+        last_updated=last_updated,
+        blocked_users=blocked_users,
+        blocked_ids=blocked_ids
+    )
+
+
+# ============================================================
 # HTML Templates
 # ============================================================
 
@@ -643,18 +898,83 @@ DASHBOARD_TEMPLATE = """
         table { width: 100%; border-collapse: collapse; background: #2b2b2b; border-radius: 10px; overflow: hidden; margin: 20px 0; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #444; }
         th { background: #1a1a1a; font-weight: bold; }
-        .btn { padding: 8px 16px; background: #4CAF50; border: none; color: #fff; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn { padding: 8px 16px; background: #4CAF50; border: none; color: #fff; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin: 2px; }
         .btn:hover { background: #45a049; }
         .btn-danger { background: #f44336; }
         .btn-danger:hover { background: #da190b; }
         .btn-info { background: #2196F3; }
         .btn-info:hover { background: #1976D2; }
+        .btn-warning { background: #ff9800; }
+        .btn-warning:hover { background: #e68900; }
+        .btn-success { background: #4CAF50; }
+        .btn-success:hover { background: #45a049; }
         .logout { float: right; }
+        .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .status-active { background: #4CAF50; }
+        .status-blocked { background: #f44336; }
+        .status-inactive { background: #666; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     </style>
+    <script>
+        function blockUser(licenseKey) {
+            if (!confirm('هل أنت متأكد من حظر هذا المستخدم؟\\n\\nلن يتمكن من استخدام البرنامج بعد الآن.')) {
+                return;
+            }
+            
+            fetch('/admin/block_user/' + licenseKey, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    location.reload();
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('❌ خطأ: ' + error);
+            });
+        }
+        
+        function unblockUser(licenseKey) {
+            if (!confirm('هل تريد رفع الحظر عن هذا المستخدم؟')) {
+                return;
+            }
+            
+            fetch('/admin/unblock_user/' + licenseKey, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    location.reload();
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('❌ خطأ: ' + error);
+            });
+        }
+    </script>
 </head>
 <body>
-    <h1>📊 Admin Dashboard</h1>
-    <a href="/admin/logout" class="btn btn-danger logout">Logout</a>
+    <div class="top-bar">
+        <h1>📊 Admin Dashboard</h1>
+        <div>
+            <a href="/admin/blacklist" class="btn btn-warning">🔒 القائمة السوداء</a>
+            <a href="/admin/logout" class="btn btn-danger">Logout</a>
+        </div>
+    </div>
     
     <div class="stats">
         <div class="stat-box">
@@ -688,12 +1008,27 @@ DASHBOARD_TEMPLATE = """
         {% for license in licenses %}
         <tr>
             <td><code>{{ license['license_key'] }}</code></td>
-            <td>{{ license['status'] }}</td>
+            <td>
+                {% if license['is_blocked'] %}
+                    <span class="status-badge status-blocked">🔒 BLOCKED</span>
+                {% elif license['status'] == 'active' %}
+                    <span class="status-badge status-active">✅ ACTIVE</span>
+                {% else %}
+                    <span class="status-badge status-inactive">{{ license['status'] }}</span>
+                {% endif %}
+            </td>
             <td><code>{{ license['hardware_id'][:16] if license['hardware_id'] else 'N/A' }}...</code></td>
             <td>{{ license['activated_at'] or 'N/A' }}</td>
             <td>{{ license['last_verified'] or 'N/A' }}</td>
             <td>
-                <a href="/admin/view_data/{{ license['license_key'] }}" class="btn btn-info">👁️ View Data</a>
+                <a href="/admin/view_data/{{ license['license_key'] }}" class="btn btn-info">👁️ View</a>
+                {% if license['hardware_id'] %}
+                    {% if license['is_blocked'] %}
+                        <button onclick="unblockUser('{{ license['license_key'] }}')" class="btn btn-success">✅ Unblock</button>
+                    {% else %}
+                        <button onclick="blockUser('{{ license['license_key'] }}')" class="btn btn-danger">🔒 Block</button>
+                    {% endif %}
+                {% endif %}
             </td>
         </tr>
         {% endfor %}
@@ -773,6 +1108,124 @@ VIEW_DATA_TEMPLATE = """
 </html>
 """
 
+BLACKLIST_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blacklist Management</title>
+    <style>
+        body { font-family: Arial; background: #1a1a1a; color: #fff; margin: 0; padding: 20px; }
+        h1 { margin-top: 0; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .stats { display: flex; gap: 20px; margin: 20px 0; }
+        .stat-box { background: #2b2b2b; padding: 20px; border-radius: 10px; flex: 1; }
+        .stat-box h3 { margin: 0 0 10px 0; color: #f44336; }
+        .stat-box .number { font-size: 36px; font-weight: bold; color: #f44336; }
+        table { width: 100%; border-collapse: collapse; background: #2b2b2b; border-radius: 10px; overflow: hidden; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #444; }
+        th { background: #1a1a1a; font-weight: bold; }
+        .btn { padding: 10px 20px; background: #2196F3; border: none; color: #fff; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin: 2px; }
+        .btn:hover { background: #1976D2; }
+        .btn-success { background: #4CAF50; }
+        .btn-success:hover { background: #45a049; }
+        .blocked-badge { background: #f44336; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .empty-message { text-align: center; padding: 40px; color: #666; }
+    </style>
+    <script>
+        function unblockUser(licenseKey) {
+            if (!confirm('هل تريد رفع الحظر عن هذا المستخدم؟')) {
+                return;
+            }
+            
+            fetch('/admin/unblock_user/' + licenseKey, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    location.reload();
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('❌ خطأ: ' + error);
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="top-bar">
+        <h1>🔒 Blacklist Management</h1>
+        <a href="/admin/dashboard" class="btn">← Back to Dashboard</a>
+    </div>
+    
+    <div class="stats">
+        <div class="stat-box">
+            <h3>Blocked Users</h3>
+            <div class="number">{{ blocked_count }}</div>
+        </div>
+        <div class="stat-box">
+            <h3>Last Updated</h3>
+            <div class="number" style="font-size: 18px;">{{ last_updated }}</div>
+        </div>
+    </div>
+    
+    {% if blocked_users %}
+    <h2>📋 Blocked Users</h2>
+    <table>
+        <tr>
+            <th>License Key</th>
+            <th>Hardware ID</th>
+            <th>Status</th>
+            <th>Activated</th>
+            <th>Actions</th>
+        </tr>
+        {% for user in blocked_users %}
+        <tr>
+            <td><code>{{ user['license_key'] }}</code></td>
+            <td><code>{{ user['hardware_id'][:16] }}...</code></td>
+            <td><span class="blocked-badge">🔒 BLOCKED</span></td>
+            <td>{{ user['activated_at'] or 'N/A' }}</td>
+            <td>
+                <a href="/admin/view_data/{{ user['license_key'] }}" class="btn">👁️ View Data</a>
+                <button onclick="unblockUser('{{ user['license_key'] }}')" class="btn btn-success">✅ Unblock</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <div class="empty-message">
+        <h2>✅ No blocked users</h2>
+        <p>القائمة السوداء فارغة - لا يوجد مستخدمين محظورين</p>
+    </div>
+    {% endif %}
+    
+    {% if blocked_ids|length > blocked_users|length %}
+    <h2>⚠️ Unknown Blocked Hardware IDs</h2>
+    <p>هذه Hardware IDs محظورة لكن لا توجد لها تراخيص في قاعدة البيانات:</p>
+    <ul>
+        {% for hw_id in blocked_ids %}
+            {% set found = namespace(value=false) %}
+            {% for user in blocked_users %}
+                {% if user['hardware_id'] == hw_id %}
+                    {% set found.value = true %}
+                {% endif %}
+            {% endfor %}
+            {% if not found.value %}
+                <li><code>{{ hw_id }}</code></li>
+            {% endif %}
+        {% endfor %}
+    </ul>
+    {% endif %}
+</body>
+</html>
+"""
+
 
 # ============================================================
 # تشغيل السيرفر
@@ -785,6 +1238,14 @@ if __name__ == '__main__':
     
     # إنشاء قاعدة البيانات
     init_db()
+    
+    # تحميل GitHub Token
+    if load_github_token():
+        print("✅ GitHub Token loaded successfully")
+    else:
+        print("⚠️  GitHub Token not found!")
+        print("   Create 'github_token.txt' file with your token")
+        print("   Or set GITHUB_TOKEN environment variable")
     
     print("\n📊 Server Info:")
     print(f"   Admin Panel: http://localhost:5000/admin/dashboard")
