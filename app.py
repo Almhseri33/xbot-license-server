@@ -1256,13 +1256,30 @@ def api_add_license():
             conn.close()
             return jsonify({'error': 'License key already exists'}), 400
         
-        # إضافة الترخيص
-        c.execute('''
-            INSERT INTO licenses 
-            (license_key, hardware_id, status, created_at, activated_at, max_activations, current_activations, license_type)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (license_key, hardware_id, 'active', created_at, datetime.now().isoformat(), 1, 1, license_type))
+        # التحقق من الأعمدة الموجودة
+        c.execute("PRAGMA table_info(licenses)")
+        columns = [col[1] for col in c.fetchall()]
         
+        # بناء الاستعلام حسب الأعمدة المتوفرة
+        insert_columns = ['license_key', 'hardware_id', 'status', 'created_at', 'activated_at']
+        insert_values = [license_key, hardware_id, 'active', created_at, datetime.now().isoformat()]
+        
+        if 'max_activations' in columns:
+            insert_columns.append('max_activations')
+            insert_values.append(1)
+        
+        if 'current_activations' in columns:
+            insert_columns.append('current_activations')
+            insert_values.append(1)
+        
+        if 'license_type' in columns:
+            insert_columns.append('license_type')
+            insert_values.append(license_type)
+        
+        placeholders = ', '.join(['?' for _ in insert_values])
+        query = f"INSERT INTO licenses ({', '.join(insert_columns)}) VALUES ({placeholders})"
+        
+        c.execute(query, insert_values)
         conn.commit()
         conn.close()
         
@@ -1275,6 +1292,9 @@ def api_add_license():
         }), 200
         
     except Exception as e:
+        print(f"Error in add_license: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
