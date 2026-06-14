@@ -1228,6 +1228,206 @@ BLACKLIST_TEMPLATE = """
 
 
 # ============================================================
+# Admin Panel Desktop APIs
+# ============================================================
+
+@app.route('/api/admin/add-license', methods=['POST'])
+def api_add_license():
+    """API لإضافة ترخيص من Admin Panel Desktop"""
+    try:
+        data = request.get_json()
+        
+        hardware_id = data.get('hardware_id')
+        license_key = data.get('license_key')
+        license_type = data.get('type', 'lifetime')
+        created_at = data.get('created_at', datetime.now().isoformat())
+        
+        if not hardware_id or not license_key:
+            return jsonify({'error': 'Missing hardware_id or license_key'}), 400
+        
+        conn = get_db()
+        c = conn.cursor()
+        
+        # التحقق من عدم وجود الترخيص مسبقاً
+        c.execute('SELECT id FROM licenses WHERE license_key = ?', (license_key,))
+        existing = c.fetchone()
+        
+        if existing:
+            conn.close()
+            return jsonify({'error': 'License key already exists'}), 400
+        
+        # إضافة الترخيص
+        c.execute('''
+            INSERT INTO licenses 
+            (license_key, hardware_id, status, created_at, activated_at, max_activations, current_activations, license_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (license_key, hardware_id, 'active', created_at, datetime.now().isoformat(), 1, 1, license_type))
+        
+        conn.commit()
+        conn.close()
+        
+        log_activity(license_key, 'created_via_api', request.remote_addr, f'License created from Admin Panel Desktop')
+        
+        return jsonify({
+            'success': True,
+            'message': 'License added successfully',
+            'license_key': license_key
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/admin/sync-blacklist', methods=['POST'])
+def api_sync_blacklist():
+    """API لمزامنة القائمة السوداء من Admin Panel Desktop"""
+    try:
+        data = request.get_json()
+        
+        blocked_hardware_ids = data.get('blocked_hardware_ids', [])
+        last_updated = data.get('last_updated', datetime.now().isoformat())
+        
+        # حفظ القائمة السوداء محلياً
+        blacklist_data = {
+            'blocked_hardware_ids': blocked_hardware_ids,
+            'last_updated': last_updated,
+            'notes': 'Synced from Admin Panel Desktop'
+        }
+        
+        with open('blacklist.json', 'w', encoding='utf-8') as f:
+            json.dump(blacklist_data, f, indent=2, ensure_ascii=False)
+        
+        # رفع إلى GitHub إذا كان متوفراً
+        if GITHUB_TOKEN and GITHUB_USERNAME and GITHUB_REPO:
+            try:
+                update_github_blacklist(blacklist_data)
+            except:
+                pass  # لا بأس إذا فشل GitHub
+        
+        return jsonify({
+            'success': True,
+            'message': 'Blacklist synced successfully',
+            'blocked_count': len(blocked_hardware_ids)
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/admin/get-users', methods=['GET'])
+def api_get_users():
+    """API لجلب قائمة جميع المستخدمين"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        
+        c.execute('''
+            SELECT 
+                license_key, 
+                hardware_id, 
+                status, 
+                created_at, 
+                activated_at,
+                last_seen,
+                current_activations,
+                license_type
+            FROM licenses
+            ORDER BY created_at DESC
+        ''')
+        
+        users = []
+        for row in c.fetchall():
+            users.append({
+                'license_key': row[0],
+                'hardware_id': row[1] or 'Not activated',
+                'status': row[2],
+                'created_at': row[3],
+                'activated_at': row[4],
+                'last_seen': row[5],
+                'current_activations': row[6],
+                'license_type': row[7] or 'lifetime'
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'users': users,
+            'total': len(users)
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/admin/get-user-details/<license_key>', methods=['GET'])
+def api_get_user_details(license_key):
+    """API لجلب تفاصيل مستخدم معين مع البيانات المفككة"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        
+        c.execute('''
+            SELECT 
+                license_key, hardware_id, status, created_at, activated_at,
+                last_seen, encrypted_data, max_activations, current_activations,
+                license_type
+            FROM licenses 
+            WHERE license_key = ?
+        ''', (license_key,))
+        
+        row = c.fetchone()
+        conn.close()
+        
+        if not row:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # فك تشفير البيانات
+        encrypted_data = row[6]
+        decrypted_accounts = []
+        
+        if encrypted_data:
+            try:
+                encryption = DataEncryption()
+                decrypted_data = encryption.decrypt_data(encrypted_data)
+                
+                if 'accounts' in decrypted_data:
+                    accounts = decrypted_data['accounts']
+                    for acc in accounts:
+                        # إزالة معلومات حساسة
+                        safe_account = {
+                            'username': acc.get('username', 'Unknown'),
+                            'status': acc.get('status', 'Unknown'),
+                            'added_at': acc.get('added_at', 'Unknown')
+                        }
+                        decrypted_accounts.append(safe_account)
+            except:
+                pass
+        
+        user_details = {
+            'license_key': row[0],
+            'hardware_id': row[1] or 'Not activated',
+            'status': row[2],
+            'created_at': row[3],
+            'activated_at': row[4],
+            'last_seen': row[5],
+            'max_activations': row[7],
+            'current_activations': row[8],
+            'license_type': row[9] or 'lifetime',
+            'accounts': decrypted_accounts,
+            'total_accounts': len(decrypted_accounts)
+        }
+        
+        return jsonify({
+            'success': True,
+            'user': user_details
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================
 # تشغيل السيرفر
 # ============================================================
 
