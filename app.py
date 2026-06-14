@@ -1394,17 +1394,13 @@ def api_get_user_details(license_key):
         conn = get_db()
         c = conn.cursor()
         
-        # التحقق من الأعمدة الموجودة
+        # التحقق من الأعمدة الموجودة في licenses
         c.execute("PRAGMA table_info(licenses)")
         columns_info = c.fetchall()
         columns = [col[1] for col in columns_info]
         
         # بناء قائمة الأعمدة المتوفرة
         select_columns = ['license_key', 'hardware_id', 'status', 'created_at', 'activated_at']
-        
-        # إضافة encrypted_data إذا موجود
-        if 'encrypted_data' in columns:
-            select_columns.append('encrypted_data')
         
         # إضافة الأعمدة الاختيارية
         optional_columns = []
@@ -1425,9 +1421,9 @@ def api_get_user_details(license_key):
         c.execute(query, (license_key,))
         
         row = c.fetchone()
-        conn.close()
         
         if not row:
+            conn.close()
             return jsonify({'error': 'User not found'}), 404
         
         # بناء user_details من البداية
@@ -1445,28 +1441,8 @@ def api_get_user_details(license_key):
             'total_accounts': 0
         }
         
-        # فك تشفير البيانات إذا موجودة
-        encrypted_idx = 5 if 'encrypted_data' in columns else -1
-        if encrypted_idx > 0 and len(row) > encrypted_idx and row[encrypted_idx]:
-            try:
-                encryption = DataEncryption()
-                decrypted_data = encryption.decrypt_data(row[encrypted_idx])
-                
-                if 'accounts' in decrypted_data:
-                    accounts = decrypted_data['accounts']
-                    for acc in accounts:
-                        safe_account = {
-                            'username': acc.get('username', 'Unknown'),
-                            'status': acc.get('status', 'Unknown'),
-                            'added_at': acc.get('added_at', 'Unknown')
-                        }
-                        user_details['accounts'].append(safe_account)
-                    user_details['total_accounts'] = len(user_details['accounts'])
-            except Exception as e:
-                print(f"Error decrypting data: {e}")
-        
         # ملء الحقول الاختيارية
-        current_idx = 6 if 'encrypted_data' in columns else 5
+        current_idx = 5
         
         if 'last_seen' in optional_columns and len(row) > current_idx:
             user_details['last_seen'] = row[current_idx] or 'N/A'
@@ -1482,6 +1458,46 @@ def api_get_user_details(license_key):
         
         if 'license_type' in optional_columns and len(row) > current_idx:
             user_details['license_type'] = row[current_idx] or 'lifetime'
+        
+        # 🔥 جلب البيانات المشفرة من جدول synced_data
+        c.execute('''
+            SELECT encrypted_data, accounts_count, synced_at
+            FROM synced_data
+            WHERE license_key = ?
+            ORDER BY synced_at DESC
+            LIMIT 1
+        ''', (license_key,))
+        
+        sync_row = c.fetchone()
+        conn.close()
+        
+        if sync_row and sync_row[0]:
+            try:
+                encryption = DataEncryption()
+                decrypted_data = encryption.decrypt_data(sync_row[0])
+                
+                # البيانات المشفرة عبارة عن قائمة الحسابات مباشرة
+                if isinstance(decrypted_data, list):
+                    accounts = decrypted_data
+                elif isinstance(decrypted_data, dict) and 'accounts' in decrypted_data:
+                    accounts = decrypted_data['accounts']
+                else:
+                    accounts = []
+                
+                for acc in accounts:
+                    safe_account = {
+                        'username': acc.get('username', 'Unknown'),
+                        'status': acc.get('status', 'active'),
+                        'added_at': acc.get('added_at', 'Unknown')
+                    }
+                    user_details['accounts'].append(safe_account)
+                
+                user_details['total_accounts'] = len(user_details['accounts'])
+                
+            except Exception as e:
+                print(f"Error decrypting data: {e}")
+                import traceback
+                traceback.print_exc()
         
         return jsonify({
             'success': True,
