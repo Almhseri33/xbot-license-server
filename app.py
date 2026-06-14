@@ -1465,23 +1465,11 @@ def api_get_user_details(license_key):
 # ============================================================
 # تشغيل السيرفر
 # ============================================================
-            'created_at': row[3],
-            'activated_at': row[4],
-            'last_seen': row[5],
-            'max_activations': row[7],
-            'current_activations': row[8],
-            'license_type': row[9] or 'lifetime',
-            'accounts': decrypted_accounts,
-            'total_accounts': len(decrypted_accounts)
-        }
-        
-        return jsonify({
-            'success': True,
-            'user': user_details
-        }), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    print("="*60)
+    print("🚀 License Server Starting...")
+    print("="*60)
 
 
 # ============================================================
