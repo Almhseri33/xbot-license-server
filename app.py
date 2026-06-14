@@ -1325,30 +1325,19 @@ def api_get_users():
         c.execute("PRAGMA table_info(licenses)")
         columns = [col[1] for col in c.fetchall()]
         
-        # نبني الاستعلام حسب الأعمدة المتوفرة
-        base_columns = ['license_key', 'hardware_id', 'status', 'created_at', 
-                       'activated_at', 'last_seen', 'current_activations']
+        # نبني قائمة الأعمدة المتوفرة فقط
+        available_columns = ['license_key', 'hardware_id', 'status', 'created_at', 'activated_at']
         
-        # نتحقق إذا license_type موجود
-        has_license_type = 'license_type' in columns
+        # نتحقق من الأعمدة الاختيارية
+        if 'last_seen' in columns:
+            available_columns.append('last_seen')
+        if 'current_activations' in columns:
+            available_columns.append('current_activations')
+        if 'license_type' in columns:
+            available_columns.append('license_type')
         
-        if has_license_type:
-            query = '''
-                SELECT 
-                    license_key, hardware_id, status, created_at, activated_at,
-                    last_seen, current_activations, license_type
-                FROM licenses
-                ORDER BY created_at DESC
-            '''
-        else:
-            query = '''
-                SELECT 
-                    license_key, hardware_id, status, created_at, activated_at,
-                    last_seen, current_activations
-                FROM licenses
-                ORDER BY created_at DESC
-            '''
-        
+        # بناء الاستعلام
+        query = f"SELECT {', '.join(available_columns)} FROM licenses ORDER BY created_at DESC"
         c.execute(query)
         
         users = []
@@ -1359,9 +1348,9 @@ def api_get_users():
                 'status': row[2],
                 'created_at': row[3],
                 'activated_at': row[4],
-                'last_seen': row[5],
-                'current_activations': row[6],
-                'license_type': row[7] if has_license_type and len(row) > 7 else 'lifetime'
+                'last_seen': row[5] if len(row) > 5 and 'last_seen' in available_columns else 'N/A',
+                'current_activations': row[6] if len(row) > 6 and 'current_activations' in available_columns else 1,
+                'license_type': row[7] if len(row) > 7 and 'license_type' in available_columns else 'lifetime'
             }
             users.append(user_data)
         
@@ -1388,26 +1377,20 @@ def api_get_user_details(license_key):
         # التحقق من الأعمدة الموجودة
         c.execute("PRAGMA table_info(licenses)")
         columns = [col[1] for col in c.fetchall()]
-        has_license_type = 'license_type' in columns
         
-        if has_license_type:
-            query = '''
-                SELECT 
-                    license_key, hardware_id, status, created_at, activated_at,
-                    last_seen, encrypted_data, max_activations, current_activations,
-                    license_type
-                FROM licenses 
-                WHERE license_key = ?
-            '''
-        else:
-            query = '''
-                SELECT 
-                    license_key, hardware_id, status, created_at, activated_at,
-                    last_seen, encrypted_data, max_activations, current_activations
-                FROM licenses 
-                WHERE license_key = ?
-            '''
+        # بناء قائمة الأعمدة المتوفرة
+        available_columns = ['license_key', 'hardware_id', 'status', 'created_at', 'activated_at', 'encrypted_data']
         
+        if 'last_seen' in columns:
+            available_columns.append('last_seen')
+        if 'max_activations' in columns:
+            available_columns.append('max_activations')
+        if 'current_activations' in columns:
+            available_columns.append('current_activations')
+        if 'license_type' in columns:
+            available_columns.append('license_type')
+        
+        query = f"SELECT {', '.join(available_columns)} FROM licenses WHERE license_key = ?"
         c.execute(query, (license_key,))
         
         row = c.fetchone()
@@ -1417,7 +1400,7 @@ def api_get_user_details(license_key):
             return jsonify({'error': 'User not found'}), 404
         
         # فك تشفير البيانات
-        encrypted_data = row[6]
+        encrypted_data = row[5]  # encrypted_data دائماً في موقع 5
         decrypted_accounts = []
         
         if encrypted_data:
@@ -1428,7 +1411,6 @@ def api_get_user_details(license_key):
                 if 'accounts' in decrypted_data:
                     accounts = decrypted_data['accounts']
                     for acc in accounts:
-                        # إزالة معلومات حساسة
                         safe_account = {
                             'username': acc.get('username', 'Unknown'),
                             'status': acc.get('status', 'Unknown'),
@@ -1438,19 +1420,36 @@ def api_get_user_details(license_key):
             except:
                 pass
         
+        # بناء user_details حسب الأعمدة المتوفرة
+        idx = 0
         user_details = {
-            'license_key': row[0],
-            'hardware_id': row[1] or 'Not activated',
-            'status': row[2],
-            'created_at': row[3],
-            'activated_at': row[4],
-            'last_seen': row[5],
-            'max_activations': row[7],
-            'current_activations': row[8],
-            'license_type': row[9] if has_license_type and len(row) > 9 else 'lifetime',
+            'license_key': row[idx],
+            'hardware_id': row[idx+1] or 'Not activated',
+            'status': row[idx+2],
+            'created_at': row[idx+3],
+            'activated_at': row[idx+4],
+            # encrypted_data في idx+5 لكن ما نعرضه
+            'last_seen': 'N/A',
+            'max_activations': 1,
+            'current_activations': 1,
+            'license_type': 'lifetime',
             'accounts': decrypted_accounts,
             'total_accounts': len(decrypted_accounts)
         }
+        
+        # نملأ القيم الموجودة
+        current_idx = 6  # بعد encrypted_data
+        if 'last_seen' in available_columns:
+            user_details['last_seen'] = row[current_idx] or 'N/A'
+            current_idx += 1
+        if 'max_activations' in available_columns:
+            user_details['max_activations'] = row[current_idx] or 1
+            current_idx += 1
+        if 'current_activations' in available_columns:
+            user_details['current_activations'] = row[current_idx] or 1
+            current_idx += 1
+        if 'license_type' in available_columns:
+            user_details['license_type'] = row[current_idx] or 'lifetime'
         
         return jsonify({
             'success': True,
@@ -1458,7 +1457,7 @@ def api_get_user_details(license_key):
         }), 200
         
     except Exception as e:
-        print(f"Error in get_user_details: {e}")  # للتشخيص
+        print(f"Error in get_user_details: {e}")
         return jsonify({'error': str(e)}), 500
 
 
