@@ -1321,23 +1321,39 @@ def api_get_users():
         conn = get_db()
         c = conn.cursor()
         
-        c.execute('''
-            SELECT 
-                license_key, 
-                hardware_id, 
-                status, 
-                created_at, 
-                activated_at,
-                last_seen,
-                current_activations,
-                license_type
-            FROM licenses
-            ORDER BY created_at DESC
-        ''')
+        # أولاً نتحقق من الأعمدة الموجودة
+        c.execute("PRAGMA table_info(licenses)")
+        columns = [col[1] for col in c.fetchall()]
+        
+        # نبني الاستعلام حسب الأعمدة المتوفرة
+        base_columns = ['license_key', 'hardware_id', 'status', 'created_at', 
+                       'activated_at', 'last_seen', 'current_activations']
+        
+        # نتحقق إذا license_type موجود
+        has_license_type = 'license_type' in columns
+        
+        if has_license_type:
+            query = '''
+                SELECT 
+                    license_key, hardware_id, status, created_at, activated_at,
+                    last_seen, current_activations, license_type
+                FROM licenses
+                ORDER BY created_at DESC
+            '''
+        else:
+            query = '''
+                SELECT 
+                    license_key, hardware_id, status, created_at, activated_at,
+                    last_seen, current_activations
+                FROM licenses
+                ORDER BY created_at DESC
+            '''
+        
+        c.execute(query)
         
         users = []
         for row in c.fetchall():
-            users.append({
+            user_data = {
                 'license_key': row[0],
                 'hardware_id': row[1] or 'Not activated',
                 'status': row[2],
@@ -1345,8 +1361,9 @@ def api_get_users():
                 'activated_at': row[4],
                 'last_seen': row[5],
                 'current_activations': row[6],
-                'license_type': row[7] or 'lifetime'
-            })
+                'license_type': row[7] if has_license_type and len(row) > 7 else 'lifetime'
+            }
+            users.append(user_data)
         
         conn.close()
         
@@ -1357,6 +1374,7 @@ def api_get_users():
         }), 200
         
     except Exception as e:
+        print(f"Error in get_users: {e}")  # للتشخيص
         return jsonify({'error': str(e)}), 500
 
 
@@ -1367,14 +1385,30 @@ def api_get_user_details(license_key):
         conn = get_db()
         c = conn.cursor()
         
-        c.execute('''
-            SELECT 
-                license_key, hardware_id, status, created_at, activated_at,
-                last_seen, encrypted_data, max_activations, current_activations,
-                license_type
-            FROM licenses 
-            WHERE license_key = ?
-        ''', (license_key,))
+        # التحقق من الأعمدة الموجودة
+        c.execute("PRAGMA table_info(licenses)")
+        columns = [col[1] for col in c.fetchall()]
+        has_license_type = 'license_type' in columns
+        
+        if has_license_type:
+            query = '''
+                SELECT 
+                    license_key, hardware_id, status, created_at, activated_at,
+                    last_seen, encrypted_data, max_activations, current_activations,
+                    license_type
+                FROM licenses 
+                WHERE license_key = ?
+            '''
+        else:
+            query = '''
+                SELECT 
+                    license_key, hardware_id, status, created_at, activated_at,
+                    last_seen, encrypted_data, max_activations, current_activations
+                FROM licenses 
+                WHERE license_key = ?
+            '''
+        
+        c.execute(query, (license_key,))
         
         row = c.fetchone()
         conn.close()
@@ -1408,6 +1442,29 @@ def api_get_user_details(license_key):
             'license_key': row[0],
             'hardware_id': row[1] or 'Not activated',
             'status': row[2],
+            'created_at': row[3],
+            'activated_at': row[4],
+            'last_seen': row[5],
+            'max_activations': row[7],
+            'current_activations': row[8],
+            'license_type': row[9] if has_license_type and len(row) > 9 else 'lifetime',
+            'accounts': decrypted_accounts,
+            'total_accounts': len(decrypted_accounts)
+        }
+        
+        return jsonify({
+            'success': True,
+            'user': user_details
+        }), 200
+        
+    except Exception as e:
+        print(f"Error in get_user_details: {e}")  # للتشخيص
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================
+# تشغيل السيرفر
+# ============================================================
             'created_at': row[3],
             'activated_at': row[4],
             'last_seen': row[5],
