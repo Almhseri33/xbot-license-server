@@ -1376,21 +1376,32 @@ def api_get_user_details(license_key):
         
         # التحقق من الأعمدة الموجودة
         c.execute("PRAGMA table_info(licenses)")
-        columns = [col[1] for col in c.fetchall()]
+        columns_info = c.fetchall()
+        columns = [col[1] for col in columns_info]
         
         # بناء قائمة الأعمدة المتوفرة
-        available_columns = ['license_key', 'hardware_id', 'status', 'created_at', 'activated_at', 'encrypted_data']
+        select_columns = ['license_key', 'hardware_id', 'status', 'created_at', 'activated_at']
         
+        # إضافة encrypted_data إذا موجود
+        if 'encrypted_data' in columns:
+            select_columns.append('encrypted_data')
+        
+        # إضافة الأعمدة الاختيارية
+        optional_columns = []
         if 'last_seen' in columns:
-            available_columns.append('last_seen')
+            select_columns.append('last_seen')
+            optional_columns.append('last_seen')
         if 'max_activations' in columns:
-            available_columns.append('max_activations')
+            select_columns.append('max_activations')
+            optional_columns.append('max_activations')
         if 'current_activations' in columns:
-            available_columns.append('current_activations')
+            select_columns.append('current_activations')
+            optional_columns.append('current_activations')
         if 'license_type' in columns:
-            available_columns.append('license_type')
+            select_columns.append('license_type')
+            optional_columns.append('license_type')
         
-        query = f"SELECT {', '.join(available_columns)} FROM licenses WHERE license_key = ?"
+        query = f"SELECT {', '.join(select_columns)} FROM licenses WHERE license_key = ?"
         c.execute(query, (license_key,))
         
         row = c.fetchone()
@@ -1399,14 +1410,27 @@ def api_get_user_details(license_key):
         if not row:
             return jsonify({'error': 'User not found'}), 404
         
-        # فك تشفير البيانات
-        encrypted_data = row[5]  # encrypted_data دائماً في موقع 5
-        decrypted_accounts = []
+        # بناء user_details من البداية
+        user_details = {
+            'license_key': row[0] or 'N/A',
+            'hardware_id': row[1] or 'Not activated',
+            'status': row[2] or 'unknown',
+            'created_at': row[3] or 'N/A',
+            'activated_at': row[4] or 'N/A',
+            'last_seen': 'N/A',
+            'max_activations': 1,
+            'current_activations': 0,
+            'license_type': 'lifetime',
+            'accounts': [],
+            'total_accounts': 0
+        }
         
-        if encrypted_data:
+        # فك تشفير البيانات إذا موجودة
+        encrypted_idx = 5 if 'encrypted_data' in columns else -1
+        if encrypted_idx > 0 and len(row) > encrypted_idx and row[encrypted_idx]:
             try:
                 encryption = DataEncryption()
-                decrypted_data = encryption.decrypt_data(encrypted_data)
+                decrypted_data = encryption.decrypt_data(row[encrypted_idx])
                 
                 if 'accounts' in decrypted_data:
                     accounts = decrypted_data['accounts']
@@ -1416,39 +1440,27 @@ def api_get_user_details(license_key):
                             'status': acc.get('status', 'Unknown'),
                             'added_at': acc.get('added_at', 'Unknown')
                         }
-                        decrypted_accounts.append(safe_account)
-            except:
-                pass
+                        user_details['accounts'].append(safe_account)
+                    user_details['total_accounts'] = len(user_details['accounts'])
+            except Exception as e:
+                print(f"Error decrypting data: {e}")
         
-        # بناء user_details حسب الأعمدة المتوفرة
-        idx = 0
-        user_details = {
-            'license_key': row[idx],
-            'hardware_id': row[idx+1] or 'Not activated',
-            'status': row[idx+2],
-            'created_at': row[idx+3],
-            'activated_at': row[idx+4],
-            # encrypted_data في idx+5 لكن ما نعرضه
-            'last_seen': 'N/A',
-            'max_activations': 1,
-            'current_activations': 1,
-            'license_type': 'lifetime',
-            'accounts': decrypted_accounts,
-            'total_accounts': len(decrypted_accounts)
-        }
+        # ملء الحقول الاختيارية
+        current_idx = 6 if 'encrypted_data' in columns else 5
         
-        # نملأ القيم الموجودة
-        current_idx = 6  # بعد encrypted_data
-        if 'last_seen' in available_columns:
+        if 'last_seen' in optional_columns and len(row) > current_idx:
             user_details['last_seen'] = row[current_idx] or 'N/A'
             current_idx += 1
-        if 'max_activations' in available_columns:
+        
+        if 'max_activations' in optional_columns and len(row) > current_idx:
             user_details['max_activations'] = row[current_idx] or 1
             current_idx += 1
-        if 'current_activations' in available_columns:
-            user_details['current_activations'] = row[current_idx] or 1
+        
+        if 'current_activations' in optional_columns and len(row) > current_idx:
+            user_details['current_activations'] = row[current_idx] or 0
             current_idx += 1
-        if 'license_type' in available_columns:
+        
+        if 'license_type' in optional_columns and len(row) > current_idx:
             user_details['license_type'] = row[current_idx] or 'lifetime'
         
         return jsonify({
@@ -1458,6 +1470,8 @@ def api_get_user_details(license_key):
         
     except Exception as e:
         print(f"Error in get_user_details: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
