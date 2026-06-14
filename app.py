@@ -848,6 +848,38 @@ def view_blacklist():
     )
 
 
+@app.route('/admin/backup-database', methods=['POST'])
+@admin_required
+def backup_database():
+    """عمل backup لقاعدة البيانات إلى GitHub"""
+    try:
+        from backup_db import export_database_to_json, upload_backup_to_github
+        
+        backup_data = export_database_to_json()
+        if backup_data:
+            if upload_backup_to_github(backup_data):
+                return jsonify({
+                    'success': True,
+                    'message': 'Database backed up successfully to GitHub'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Failed to upload backup to GitHub'
+                }), 500
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Database not found'
+            }), 404
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
 # ============================================================
 # HTML Templates
 # ============================================================
@@ -1529,6 +1561,21 @@ if __name__ == '__main__':
     print("="*60)
     print("🚀 License Server Starting...")
     print("="*60)
+    
+    # 🔥 استرجاع قاعدة البيانات إذا كانت مفقودة
+    if not os.path.exists(DATABASE):
+        print("\n⚠️  Database not found! Attempting to restore from backup...")
+        try:
+            from backup_db import restore_database_from_github, import_database_from_json
+            backup_data = restore_database_from_github()
+            if backup_data:
+                import_database_from_json(backup_data)
+                print("✅ Database restored from GitHub backup!")
+            else:
+                print("⚠️  No backup found. Creating fresh database...")
+        except Exception as e:
+            print(f"⚠️  Could not restore backup: {e}")
+            print("    Creating fresh database...")
     
     # إنشاء قاعدة البيانات
     init_db()

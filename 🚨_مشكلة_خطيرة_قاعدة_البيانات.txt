@@ -1,0 +1,239 @@
+═══════════════════════════════════════════════════════════════
+    🚨 مشكلة خطيرة: قاعدة البيانات تُحذف عند Restart
+═══════════════════════════════════════════════════════════════
+
+📅 التاريخ: 15 يونيو 2026
+⏰ الوقت: 12:30 AM
+🔴 الأولوية: عالية جداً
+
+═══════════════════════════════════════════════════════════════
+
+❌ المشكلة:
+
+عندما يتم restart للسيرفر على Render:
+• جميع المستخدمين يختفون من Admin Panel ❌
+• جميع التراخيص تُحذف ❌
+• البيانات المزامنة تُفقد ❌
+
+═══════════════════════════════════════════════════════════════
+
+🔍 السبب:
+
+السيرفر يستخدم **SQLite محلية**:
+```python
+DATABASE = 'license_server.db'
+```
+
+على Render:
+• SQLite تُحفظ في filesystem مؤقت
+• عند restart: الملف يُحذف تماماً 💀
+• Render Free لا يدعم Persistent Volumes
+
+═══════════════════════════════════════════════════════════════
+
+✅ الحلول الممكنة:
+
+1️⃣ PostgreSQL من Render (الأفضل - مجاني)
+   • قاعدة بيانات دائمة
+   • لا تُحذف أبداً
+   • سريعة ومستقرة
+   • مجانية على Render
+   
+2️⃣ Supabase PostgreSQL (بديل)
+   • مجاني حتى 500 MB
+   • قاعدة بيانات في السحابة
+   
+3️⃣ MongoDB Atlas (بديل)
+   • مجاني حتى 512 MB
+   • NoSQL
+
+═══════════════════════════════════════════════════════════════
+
+🚀 الحل الموصى به: PostgreSQL من Render
+
+خطوات الإعداد:
+
+1️⃣ إنشاء PostgreSQL Database على Render:
+   • اذهب لـ: https://dashboard.render.com
+   • اضغط "New +" → "PostgreSQL"
+   • الاسم: xbot-license-db
+   • Region: نفس منطقة السيرفر
+   • Instance Type: Free
+   • اضغط "Create Database"
+
+2️⃣ الحصول على Connection String:
+   • بعد الإنشاء، ستظهر:
+     "Internal Database URL" ← استخدم هذا
+   • مثال:
+     postgresql://user:password@hostname:5432/database
+
+3️⃣ إضافة Environment Variable للسيرفر:
+   • اذهب لـ Web Service → Environment
+   • أضف:
+     Name: DATABASE_URL
+     Value: [الصق الـ Internal Database URL]
+
+4️⃣ تعديل الكود لاستخدام PostgreSQL:
+   • تثبيت psycopg2
+   • تعديل init_db()
+   • تعديل get_db()
+
+═══════════════════════════════════════════════════════════════
+
+📝 التعديلات المطلوبة:
+
+ملف: requirements.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+أضف:
+psycopg2-binary==2.9.9
+
+ملف: server/app.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+استبدل:
+```python
+import sqlite3
+
+DATABASE = 'license_server.db'
+
+def get_db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
+```
+
+بـ:
+```python
+import psycopg2
+import psycopg2.extras
+import os
+
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+def get_db():
+    conn = psycopg2.connect(DATABASE_URL)
+    return conn
+```
+
+═══════════════════════════════════════════════════════════════
+
+🔄 التغييرات في SQL Queries:
+
+SQLite → PostgreSQL
+
+1. AUTOINCREMENT → SERIAL
+   SQLite: id INTEGER PRIMARY KEY AUTOINCREMENT
+   PostgreSQL: id SERIAL PRIMARY KEY
+
+2. TEXT → VARCHAR/TEXT
+   (نفس الشيء تقريباً)
+
+3. datetime strings → TIMESTAMP
+   SQLite: created_at TEXT
+   PostgreSQL: created_at TIMESTAMP
+
+4. PRAGMA → Information Schema
+   SQLite: PRAGMA table_info(licenses)
+   PostgreSQL: SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'licenses'
+
+═══════════════════════════════════════════════════════════════
+
+⚡ الحل السريع (بدون PostgreSQL):
+
+إذا كنت لا تريد تعديل الكود الآن، استخدم **Backup/Restore**:
+
+1️⃣ عمل Backup دوري:
+   • كل ساعة، حفظ license_server.db في مكان خارجي
+   • GitHub (كملف مشفر)
+   • Google Drive API
+   • Dropbox API
+
+2️⃣ Auto-Restore عند بدء السيرفر:
+   • في __main__، تحقق إذا DB موجودة
+   • إذا لا، حمّلها من Backup
+
+الكود:
+```python
+import os
+import requests
+
+def restore_db_if_missing():
+    if not os.path.exists('license_server.db'):
+        print("📥 Database missing! Restoring from backup...")
+        # تحميل من URL خارجي
+        response = requests.get('YOUR_BACKUP_URL')
+        with open('license_server.db', 'wb') as f:
+            f.write(response.content)
+        print("✅ Database restored!")
+
+if __name__ == '__main__':
+    restore_db_if_missing()
+    init_db()
+    app.run(...)
+```
+
+═══════════════════════════════════════════════════════════════
+
+🎯 التوصية:
+
+استخدم **PostgreSQL من Render** لأنها:
+✅ مجانية
+✅ دائمة (لا تُحذف)
+✅ أسرع من SQLite
+✅ تدعم Concurrent Connections
+✅ Professional Solution
+
+═══════════════════════════════════════════════════════════════
+
+📊 مقارنة الحلول:
+
+حل                  | مجاني | دائم | سرعة | تعقيد
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PostgreSQL Render   | ✅    | ✅   | ⚡⚡⚡ | متوسط
+SQLite + Backup     | ✅    | ⚠️   | ⚡⚡  | سهل
+Supabase           | ✅    | ✅   | ⚡⚡⚡ | سهل
+MongoDB Atlas      | ✅    | ✅   | ⚡⚡  | متوسط
+
+═══════════════════════════════════════════════════════════════
+
+⏰ ماذا تفعل الآن؟
+
+خيار 1: PostgreSQL (موصى به)
+   ⏱️ الوقت: 30 دقيقة
+   🔧 التعديلات: متوسطة
+   ✅ النتيجة: حل دائم
+
+خيار 2: Backup/Restore (حل سريع)
+   ⏱️ الوقت: 10 دقائق
+   🔧 التعديلات: بسيطة
+   ⚠️ النتيجة: حل مؤقت
+
+═══════════════════════════════════════════════════════════════
+
+🆘 الحل الطارئ (الآن):
+
+إذا السيرفر restart الآن:
+1. اذهب لـ Render Dashboard
+2. افتح Web Service
+3. اضغط "Manual Deploy" → "Deploy latest commit"
+4. السيرفر سيرجع (لكن البيانات ضاعت)
+
+لحفظ البيانات قبل restart:
+1. استخدم Admin Panel للـ export
+2. أو استخدم API لجلب جميع البيانات
+3. احفظها في ملف JSON
+
+═══════════════════════════════════════════════════════════════
+
+📞 الدعم:
+
+أي حل تختار؟
+1️⃣ PostgreSQL (دائم - موصى به)
+2️⃣ Backup/Restore (سريع - مؤقت)
+3️⃣ حل آخر؟
+
+أخبرني وسأساعدك في التنفيذ! 🚀
+
+═══════════════════════════════════════════════════════════════
