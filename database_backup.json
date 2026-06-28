@@ -1,5 +1,5 @@
 {
-  "backup_date": "2026-06-28T19:40:08.908229",
+  "backup_date": "2026-06-28T19:50:14.686523",
   "licenses": [
     {
       "id": 1,
@@ -9,6 +9,18 @@
       "created_at": "2026-06-11T20:45:07.428911",
       "activated_at": "2026-06-11T21:03:39.988990",
       "last_verified": "2026-06-11T21:17:33.779044",
+      "max_activations": 1,
+      "current_activations": 1,
+      "notes": null
+    },
+    {
+      "id": 2,
+      "license_key": "IKPJ-AIJG-5U6U-F3VU",
+      "hardware_id": "0039c23f839a6661c31d96e27b8be0f5580f4127c5169af710080c892286dda3",
+      "status": "active",
+      "created_at": "2026-06-28T22:50:14.535490",
+      "activated_at": "2026-06-28T19:50:14.677656",
+      "last_verified": null,
       "max_activations": 1,
       "current_activations": 1,
       "notes": null
@@ -49,6 +61,62 @@
     }
   ],
   "activity_log": [
+    {
+      "id": 19,
+      "license_key": "IKPJ-AIJG-5U6U-F3VU",
+      "action": "created_via_api",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-06-28T19:50:14.680327",
+      "details": "License created from Admin Panel Desktop"
+    },
+    {
+      "id": 18,
+      "license_key": "19E6431C-A174B9D9-551B2D69",
+      "action": "activate_failed",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-06-28T19:49:51.235429",
+      "details": "Max activations reached"
+    },
+    {
+      "id": 17,
+      "license_key": "NYLJ-Q6V9-92ZT-2XAQ",
+      "action": "activate_failed",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-06-28T19:49:25.501012",
+      "details": "License not found"
+    },
+    {
+      "id": 16,
+      "license_key": "XTST-0GQC-T48K-KJQP",
+      "action": "activate_failed",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-06-28T19:49:09.986835",
+      "details": "License not found"
+    },
+    {
+      "id": 15,
+      "license_key": "9LXE-761H-P21B-SY37",
+      "action": "activate_failed",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-06-28T19:48:56.166616",
+      "details": "License not found"
+    },
+    {
+      "id": 14,
+      "license_key": "19E6431C-A174B9D9-551B2D69",
+      "action": "activate_failed",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-06-28T19:46:44.173444",
+      "details": "Max activations reached"
+    },
+    {
+      "id": 13,
+      "license_key": "ADMIN",
+      "action": "login",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-06-28T19:45:34.161470",
+      "details": "Admin logged in"
+    },
     {
       "id": 12,
       "license_key": "19E6431C-A174B9D9-551B2D69",
