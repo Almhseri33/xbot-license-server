@@ -208,6 +208,8 @@ def init_db():
             created_at TEXT,
             activated_at TEXT,
             last_verified TEXT,
+            expires_at TEXT,
+            license_duration TEXT DEFAULT 'lifetime',
             max_activations INTEGER DEFAULT 1,
             current_activations INTEGER DEFAULT 0,
             notes TEXT
@@ -439,6 +441,18 @@ def verify_license():
         conn.close()
         return jsonify({'valid': False, 'message': f"License is {license_dict['status']}"})
     
+    # ✅ فحص انتهاء الصلاحية
+    expires_at = license_dict.get('expires_at')
+    if expires_at:
+        try:
+            expiry_date = datetime.fromisoformat(expires_at)
+            if datetime.now() > expiry_date:
+                # الترخيص منتهي
+                log_activity(license_key, 'verify_failed', ip_address, 'License expired')
+                conn.close()
+                return jsonify({'valid': False, 'message': 'License has expired'})
+        except:
+            pass  # إذا في مشكلة بالتاريخ، نتجاهلها    
     # تحديث آخر تحقق
     c.execute('''
         UPDATE licenses
@@ -634,31 +648,58 @@ def view_user_data(license_key):
     )
 
 
-@app.route('/admin/create_license', methods=['POST'])
+@app.route('/admin/create_license', methods=['GET', 'POST'])
 @admin_required
 def create_license():
     """إنشاء ترخيص جديد"""
+    
+    if request.method == 'GET':
+        # عرض نافذة الإنشاء
+        return render_template_string(CREATE_LICENSE_FORM)
+    
+    # POST: إنشاء الترخيص
+    hardware_id = request.form.get('hardware_id', '').strip()
+    duration = request.form.get('duration', 'lifetime')
+    notes = request.form.get('notes', '').strip()
+    
+    if not hardware_id:
+        return render_template_string(CREATE_LICENSE_FORM, error="Hardware ID is required!")
+    
     # توليد مفتاح ترخيص عشوائي
     license_key = f"{secrets.token_hex(4).upper()}-{secrets.token_hex(4).upper()}-{secrets.token_hex(4).upper()}"
+    
+    # حساب تاريخ انتهاء الصلاحية
+    expires_at = None
+    if duration == '30days':
+        expires_at = (datetime.now() + timedelta(days=30)).isoformat()
+    elif duration == '90days':
+        expires_at = (datetime.now() + timedelta(days=90)).isoformat()
+    elif duration == '1year':
+        expires_at = (datetime.now() + timedelta(days=365)).isoformat()
+    elif duration == 'lifetime':
+        expires_at = None  # لا ينتهي
     
     conn = get_db()
     c = conn.cursor()
     
     try:
         c.execute('''
-            INSERT INTO licenses (license_key, status, created_at, max_activations, current_activations)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (license_key, 'active', datetime.now().isoformat(), 1, 0))
+            INSERT INTO licenses (license_key, hardware_id, status, created_at, expires_at, license_duration, max_activations, current_activations, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (license_key, hardware_id, 'active', datetime.now().isoformat(), expires_at, duration, 1, 0, notes))
         
         conn.commit()
         conn.close()
         
-        log_activity(license_key, 'created', request.remote_addr, 'New license created')
+        log_activity(license_key, 'created', request.remote_addr, f'New license created for HW: {hardware_id[:16]}... Duration: {duration}')
         
-        return redirect(url_for('admin_dashboard'))
+        # 🔥 Backup فوري
+        trigger_immediate_backup()
+        
+        return render_template_string(CREATE_LICENSE_SUCCESS, license_key=license_key, hardware_id=hardware_id, duration=duration)
     except Exception as e:
         conn.close()
-        return f"Error creating license: {e}"
+        return render_template_string(CREATE_LICENSE_FORM, error=f"Error: {e}")
 
 
 # ============================================================
@@ -967,6 +1008,156 @@ LOGIN_TEMPLATE = """
 </html>
 """
 
+
+# ============================================================
+# HTML Templates - Create License Forms
+# ============================================================
+
+CREATE_LICENSE_FORM = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create New License</title>
+    <style>
+        body { font-family: Arial; background: #1a1a1a; color: #fff; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 50px auto; background: #2b2b2b; padding: 30px; border-radius: 10px; }
+        h1 { margin-top: 0; color: #4CAF50; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #64B5F6; }
+        input, select, textarea { width: 100%; padding: 10px; background: #1a1a1a; border: 1px solid #444; color: #fff; border-radius: 5px; box-sizing: border-box; font-family: Arial; }
+        textarea { resize: vertical; min-height: 80px; }
+        .btn { padding: 12px 24px; background: #4CAF50; border: none; color: #fff; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; margin-top: 10px; }
+        .btn:hover { background: #45a049; }
+        .btn-secondary { background: #666; margin-top: 10px; }
+        .btn-secondary:hover { background: #555; }
+        .error { background: #f44336; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .info { background: #2196F3; padding: 15px; border-radius: 5px; margin-bottom: 20px; font-size: 14px; }
+        .duration-info { font-size: 12px; color: #999; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>➕ Create New License</h1>
+        
+        {% if error %}
+        <div class="error">❌ {{ error }}</div>
+        {% endif %}
+        
+        <div class="info">
+            💡 <strong>ملاحظة:</strong> ستحصل على كود تفعيل مرتبط بـ Hardware ID محدد. 
+            اطلب من المستخدم إرسال Hardware ID الخاص به أولاً.
+        </div>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="hardware_id">🆔 Hardware ID *</label>
+                <input type="text" id="hardware_id" name="hardware_id" 
+                       placeholder="e.g. cbe4a08ee3eb4316569a9e605c4c4e9a67882dcc4a98a9484565e663e624b676" 
+                       required>
+                <div class="duration-info">أدخل Hardware ID الذي أرسله المستخدم</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="duration">⏱️ License Duration *</label>
+                <select id="duration" name="duration" required>
+                    <option value="lifetime">♾️ Lifetime (مدى الحياة)</option>
+                    <option value="1year">📅 1 Year (سنة واحدة)</option>
+                    <option value="90days">🗓️ 90 Days (3 أشهر)</option>
+                    <option value="30days">📆 30 Days (شهر واحد)</option>
+                </select>
+                <div class="duration-info">اختر مدة صلاحية الترخيص</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">📝 Notes (اختياري)</label>
+                <textarea id="notes" name="notes" 
+                          placeholder="e.g. أحمد - @ahmad_twitter - عميل VIP"></textarea>
+                <div class="duration-info">ملاحظات لتذكر صاحب الترخيص</div>
+            </div>
+            
+            <button type="submit" class="btn">✅ Generate License Key</button>
+            <button type="button" class="btn btn-secondary" onclick="window.location.href='/admin/dashboard'">❌ Cancel</button>
+        </form>
+    </div>
+</body>
+</html>
+"""
+
+CREATE_LICENSE_SUCCESS = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>License Created</title>
+    <style>
+        body { font-family: Arial; background: #1a1a1a; color: #fff; margin: 0; padding: 20px; }
+        .container { max-width: 700px; margin: 50px auto; background: #2b2b2b; padding: 30px; border-radius: 10px; }
+        h1 { margin-top: 0; color: #4CAF50; }
+        .success-box { background: #4CAF50; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center; }
+        .license-key { font-size: 24px; font-weight: bold; font-family: 'Courier New', monospace; letter-spacing: 2px; margin: 10px 0; }
+        .info-box { background: #1a1a1a; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #444; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #64B5F6; font-weight: bold; }
+        .btn { padding: 12px 24px; background: #2196F3; border: none; color: #fff; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; margin: 10px 5px; }
+        .btn:hover { background: #1976D2; }
+        .copy-btn { background: #FF9800; }
+        .copy-btn:hover { background: #F57C00; }
+    </style>
+    <script>
+        function copyLicense() {
+            const licenseKey = document.getElementById('license-key-text').textContent;
+            navigator.clipboard.writeText(licenseKey).then(() => {
+                alert('✅ License key copied to clipboard!');
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>✅ License Created Successfully!</h1>
+        
+        <div class="success-box">
+            <div>🔑 <strong>License Key:</strong></div>
+            <div class="license-key" id="license-key-text">{{ license_key }}</div>
+            <button class="btn copy-btn" onclick="copyLicense()">📋 Copy License Key</button>
+        </div>
+        
+        <div class="info-box">
+            <div class="info-row">
+                <span class="info-label">🆔 Hardware ID:</span>
+                <span><code>{{ hardware_id[:32] }}...</code></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">⏱️ Duration:</span>
+                <span>
+                    {% if duration == 'lifetime' %}♾️ Lifetime (مدى الحياة)
+                    {% elif duration == '1year' %}📅 1 Year (سنة واحدة)
+                    {% elif duration == '90days' %}🗓️ 90 Days (3 أشهر)
+                    {% elif duration == '30days' %}📆 30 Days (شهر واحد)
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">📅 Created:</span>
+                <span>Now</span>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <p>✉️ <strong>أرسل هذا الكود للمستخدم:</strong></p>
+            <p style="font-size: 14px; color: #999;">يجب على المستخدم إدخال هذا الكود في البرنامج للتفعيل</p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="/admin/dashboard" class="btn">🏠 Back to Dashboard</a>
+            <a href="/admin/create_license" class="btn">➕ Create Another License</a>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+
 DASHBOARD_TEMPLATE = """
 <!DOCTYPE html>
 <html>
@@ -1075,7 +1266,7 @@ DASHBOARD_TEMPLATE = """
         </div>
     </div>
     
-    <form method="POST" action="/admin/create_license">
+    <form method="GET" action="/admin/create_license">
         <button type="submit" class="btn">➕ Create New License</button>
     </form>
     
@@ -1084,9 +1275,10 @@ DASHBOARD_TEMPLATE = """
         <tr>
             <th>License Key</th>
             <th>Status</th>
+            <th>Duration</th>
+            <th>Expires</th>
             <th>Hardware ID</th>
             <th>Activated</th>
-            <th>Last Verified</th>
             <th>Actions</th>
         </tr>
         {% for license in licenses %}
@@ -1101,9 +1293,22 @@ DASHBOARD_TEMPLATE = """
                     <span class="status-badge status-inactive">{{ license['status'] }}</span>
                 {% endif %}
             </td>
+            <td>
+                {% if license.get('license_duration') == 'lifetime' %}♾️ Lifetime
+                {% elif license.get('license_duration') == '1year' %}📅 1 Year
+                {% elif license.get('license_duration') == '90days' %}🗓️ 90 Days
+                {% elif license.get('license_duration') == '30days' %}📆 30 Days
+                {% else %}♾️ Lifetime{% endif %}
+            </td>
+            <td>
+                {% if license.get('expires_at') %}
+                    {{ license['expires_at'][:10] }}
+                {% else %}
+                    <span style="color: #4CAF50;">Never</span>
+                {% endif %}
+            </td>
             <td><code>{{ license['hardware_id'][:16] if license['hardware_id'] else 'N/A' }}...</code></td>
-            <td>{{ license['activated_at'] or 'N/A' }}</td>
-            <td>{{ license['last_verified'] or 'N/A' }}</td>
+            <td>{{ license['activated_at'][:10] if license['activated_at'] else 'N/A' }}</td>
             <td>
                 <a href="/admin/view_data/{{ license['license_key'] }}" class="btn btn-info">👁️ View</a>
                 {% if license['hardware_id'] %}
