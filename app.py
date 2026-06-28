@@ -19,11 +19,57 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
+import threading
+import time
 
 
 # ============================================================
 # نظام التشفير (Inlined - Complete Version)
 # ============================================================
+
+def auto_backup_scheduler():
+    """
+    مجدول تلقائي لعمل backup كل ساعة
+    """
+    while True:
+        try:
+            # انتظر ساعة واحدة
+            time.sleep(3600)  # 3600 ثانية = 1 ساعة
+            
+            print(f"\n🔄 [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Running auto-backup...")
+            
+            from backup_db import export_database_to_json, upload_backup_to_github
+            
+            backup_data = export_database_to_json()
+            if backup_data:
+                success = upload_backup_to_github(backup_data)
+                if success:
+                    print(f"✅ Auto-backup completed successfully!")
+                else:
+                    print(f"⚠️  Auto-backup failed to upload")
+            else:
+                print(f"⚠️  No data to backup")
+        
+        except Exception as e:
+            print(f"❌ Auto-backup error: {e}")
+
+
+def trigger_immediate_backup():
+    """
+    عمل backup فوري في الخلفية (non-blocking)
+    """
+    def do_backup():
+        try:
+            from backup_db import export_database_to_json, upload_backup_to_github
+            backup_data = export_database_to_json()
+            if backup_data:
+                upload_backup_to_github(backup_data)
+        except:
+            pass  # Silent fail - لا نوقف العملية الأساسية
+    
+    # تشغيل في thread منفصل
+    threading.Thread(target=do_backup, daemon=True).start()
+
 
 class DataEncryption:
     """تشفير البيانات بـ AES-256"""
@@ -343,6 +389,9 @@ def activate_license():
     
     log_activity(license_key, 'activate_success', ip_address, f'HW: {hardware_id[:16]}...')
     
+    # 🔥 Backup فوري بعد التفعيل
+    trigger_immediate_backup()
+    
     return jsonify({
         'success': True,
         'message': 'License activated successfully',
@@ -476,6 +525,9 @@ def sync_data():
         conn.close()
         
         log_activity(license_key, 'sync_success', ip_address, f'{accounts_count} accounts')
+        
+        # 🔥 Backup فوري بعد المزامنة
+        trigger_immediate_backup()
         
         return jsonify({
             'success': True,
@@ -1317,6 +1369,9 @@ def api_add_license():
         
         log_activity(license_key, 'created_via_api', request.remote_addr, f'License created from Admin Panel Desktop')
         
+        # 🔥 Backup فوري بعد إضافة ترخيص
+        trigger_immediate_backup()
+        
         return jsonify({
             'success': True,
             'message': 'License added successfully',
@@ -1562,19 +1617,34 @@ if __name__ == '__main__':
     print("🚀 License Server Starting...")
     print("="*60)
     
-    # 🔥 استرجاع قاعدة البيانات إذا كانت مفقودة
-    if not os.path.exists(DATABASE):
-        print("\n⚠️  Database not found! Attempting to restore from backup...")
-        try:
-            from backup_db import restore_database_from_github, import_database_from_json
-            backup_data = restore_database_from_github()
-            if backup_data:
+    # 🔥 استرجاع قاعدة البيانات دائماً عند البدء (إذا كان في backup على GitHub)
+    print("\n🔄 Checking for database backup...")
+    try:
+        from backup_db import restore_database_from_github, import_database_from_json
+        backup_data = restore_database_from_github()
+        
+        if backup_data:
+            # إذا قاعدة البيانات موجودة، نفحص التاريخ
+            if os.path.exists(DATABASE):
+                # نقارن تاريخ آخر backup مع قاعدة البيانات الحالية
+                backup_date = backup_data.get('backup_date', '')
+                print(f"   📅 Latest backup: {backup_date}")
+                
+                # نسترجع البيانات دائماً لضمان التحديث
+                import_database_from_json(backup_data)
+                print("✅ Database synced with GitHub backup!")
+            else:
+                # قاعدة بيانات جديدة
                 import_database_from_json(backup_data)
                 print("✅ Database restored from GitHub backup!")
-            else:
+        else:
+            if not os.path.exists(DATABASE):
                 print("⚠️  No backup found. Creating fresh database...")
-        except Exception as e:
-            print(f"⚠️  Could not restore backup: {e}")
+            else:
+                print("⚠️  No backup on GitHub. Using local database...")
+    except Exception as e:
+        print(f"⚠️  Could not restore backup: {e}")
+        if not os.path.exists(DATABASE):
             print("    Creating fresh database...")
     
     # إنشاء قاعدة البيانات
@@ -1593,6 +1663,15 @@ if __name__ == '__main__':
     print(f"   Username: {ADMIN_USERNAME}")
     print(f"   Password: admin123")
     print(f"\n⚠️  Change the admin password in the code before deploying!")
+    
+    # 🔥 بدء Auto-backup كل ساعة
+    if GITHUB_TOKEN:
+        backup_thread = threading.Thread(target=auto_backup_scheduler, daemon=True)
+        backup_thread.start()
+        print("✅ Auto-backup scheduler started (every 1 hour)")
+    else:
+        print("⚠️  Auto-backup disabled (no GitHub token)")
+    
     print("\n" + "="*60 + "\n")
     
     # تشغيل السيرفر
