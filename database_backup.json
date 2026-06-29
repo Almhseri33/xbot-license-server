@@ -1,5 +1,5 @@
 {
-  "backup_date": "2026-06-29T15:01:44.120486",
+  "backup_date": "2026-06-29T15:01:58.287107",
   "licenses": [
     {
       "id": 1,
@@ -19,8 +19,8 @@
       "hardware_id": "0039c23f839a6661c31d96e27b8be0f5580f4127c5169af710080c892286dda3",
       "status": "active",
       "created_at": "2026-06-29T18:01:43.503637",
-      "activated_at": "2026-06-29T15:01:44.103770",
-      "last_verified": null,
+      "activated_at": "2026-06-29T15:01:58.273735",
+      "last_verified": "2026-06-29T15:01:58.273741",
       "max_activations": 1,
       "current_activations": 1,
       "notes": null
@@ -61,6 +61,14 @@
     }
   ],
   "activity_log": [
+    {
+      "id": 15,
+      "license_key": "8ZC2-SS0H-9HM6-12EU",
+      "action": "activate_success",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-06-29T15:01:58.280444",
+      "details": "HW: 0039c23f839a6661..."
+    },
     {
       "id": 14,
       "license_key": "8ZC2-SS0H-9HM6-12EU",
