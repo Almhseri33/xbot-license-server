@@ -1,5 +1,5 @@
 {
-  "backup_date": "2026-06-29T15:01:58.287107",
+  "backup_date": "2026-07-09T21:43:48.128310",
   "licenses": [
     {
       "id": 1,
@@ -15,12 +15,12 @@
     },
     {
       "id": 2,
-      "license_key": "8ZC2-SS0H-9HM6-12EU",
-      "hardware_id": "0039c23f839a6661c31d96e27b8be0f5580f4127c5169af710080c892286dda3",
+      "license_key": "X1WY-NQTX-C7ID-ONUZ",
+      "hardware_id": "375ebf058ba9da5fcb442d77eb9fbf0ed9ea331f120ceb082abfddfdffc18e00",
       "status": "active",
-      "created_at": "2026-06-29T18:01:43.503637",
-      "activated_at": "2026-06-29T15:01:58.273735",
-      "last_verified": "2026-06-29T15:01:58.273741",
+      "created_at": "2026-07-10T00:43:54.814417",
+      "activated_at": "2026-07-09T21:43:48.109557",
+      "last_verified": null,
       "max_activations": 1,
       "current_activations": 1,
       "notes": null
@@ -62,27 +62,43 @@
   ],
   "activity_log": [
     {
-      "id": 15,
-      "license_key": "8ZC2-SS0H-9HM6-12EU",
-      "action": "activate_success",
+      "id": 17,
+      "license_key": "X1WY-NQTX-C7ID-ONUZ",
+      "action": "created_via_api",
       "ip_address": "127.0.0.1",
-      "timestamp": "2026-06-29T15:01:58.280444",
-      "details": "HW: 0039c23f839a6661..."
+      "timestamp": "2026-07-09T21:43:48.116584",
+      "details": "License created from Admin Panel Desktop"
+    },
+    {
+      "id": 16,
+      "license_key": "IKPJ-AIJG-5U6U-F3VU",
+      "action": "activate_failed",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-07-09T21:43:33.597156",
+      "details": "License not found"
+    },
+    {
+      "id": 15,
+      "license_key": "9LXE-761H-P21B-SY37",
+      "action": "activate_failed",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-07-09T21:43:23.824582",
+      "details": "License not found"
     },
     {
       "id": 14,
-      "license_key": "8ZC2-SS0H-9HM6-12EU",
-      "action": "created_via_api",
+      "license_key": "NYLJ-Q6V9-92ZT-2XAQ",
+      "action": "verify_failed",
       "ip_address": "127.0.0.1",
-      "timestamp": "2026-06-29T15:01:44.110080",
-      "details": "License created from Admin Panel Desktop"
+      "timestamp": "2026-07-09T21:42:41.022769",
+      "details": "License not found"
     },
     {
       "id": 13,
       "license_key": "ADMIN",
       "action": "login",
       "ip_address": "127.0.0.1",
-      "timestamp": "2026-06-29T15:01:13.413277",
+      "timestamp": "2026-07-02T16:05:47.168609",
       "details": "Admin logged in"
     },
     {
