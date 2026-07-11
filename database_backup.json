@@ -1,5 +1,5 @@
 {
-  "backup_date": "2026-07-11T21:52:16.244765",
+  "backup_date": "2026-07-11T21:52:37.075004",
   "licenses": [
     {
       "id": 1,
@@ -19,8 +19,8 @@
       "hardware_id": "beab1288ce255b4a770998dc2bf14e6c1427c53414dc3aa87cecfb6dabfcc294",
       "status": "active",
       "created_at": "2026-07-12T00:52:25.996068",
-      "activated_at": "2026-07-11T21:52:14.960138",
-      "last_verified": null,
+      "activated_at": "2026-07-11T21:52:37.062060",
+      "last_verified": "2026-07-11T21:52:37.062067",
       "max_activations": 1,
       "current_activations": 1,
       "notes": null
@@ -61,6 +61,14 @@
     }
   ],
   "activity_log": [
+    {
+      "id": 21,
+      "license_key": "JADF-3KWM-FUIJ-TV0M",
+      "action": "activate_success",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-07-11T21:52:37.068792",
+      "details": "HW: beab1288ce255b4a..."
+    },
     {
       "id": 20,
       "license_key": "JADF-3KWM-FUIJ-TV0M",
