@@ -1,5 +1,5 @@
 {
-  "backup_date": "2026-07-14T17:06:02.370533",
+  "backup_date": "2026-07-14T17:17:24.160113",
   "licenses": [
     {
       "id": 1,
@@ -15,12 +15,12 @@
     },
     {
       "id": 2,
-      "license_key": "W1RS-9NNH-LVFK-XQAP",
+      "license_key": "OMDK-O0RH-NQEX-19U9",
       "hardware_id": "f619862ce54296768891ddfd3b1ce6470c8e9cb120fb0b8f20a8db27bc727d90",
       "status": "active",
-      "created_at": "2026-07-14T20:05:09.885359",
-      "activated_at": "2026-07-14T17:05:59.841406",
-      "last_verified": "2026-07-14T17:05:59.841413",
+      "created_at": "2026-07-14T20:17:22.954122",
+      "activated_at": "2026-07-14T17:17:22.754157",
+      "last_verified": null,
       "max_activations": 1,
       "current_activations": 1,
       "notes": null
@@ -58,255 +58,39 @@
       "encrypted_data": "Z0FBQUFBQnFLdnUtdGxZc0MtcTh2RHpQNFVYUF9DcGZ4a211OGp0OTBCSVplUW5YeFFEeE5ZU2RxZ19TVVBnQ25LSjRhbW80OE16cEFNOXVLNkRIbzZUWTlPQ1pDdzFyZjg5VDZjVVNpNUpGUExwOXFldUdyal9kUnYzellqQUtoR0pZY3FKTDRINGd4cWlua3A2aE1Zb1I5UTR5U2hiOUdzeHdGZUMzU2w3Wm1qUU5fcEZoRG5NdmRaVU01T0IyYXNLYkotSW1zeTZhZGMwU2VCTDFtcDAzWVA2dDNyVUdFcjA5SVNjZmlyeGlNbHB2eE5zNko3RnBCOXJhX2QzTDhSd2VWbGU1dHI4akRCeGc5RWZZREhad3U4RERESkhJT2JSRjlybXppdHZGMHJiRVYzYXliTHh3ZzEzMjFyYlBjaVdEUDl2dGc2YWZqYXp1X1F3anJ3NGtMcHNCaU8xd2JaMGY1QzRHQkhEaks1d2tFbG4xUUo5aUxPbGcwQ1ptOHk3MXV6RTY2VldGZXloWWc0NmdjSWdKUkNORzgyREN1UmM5Vzd3Z2l5Y2lFQV9nc2RfYlcxUnM2dnV5eEVyTGQ5OC1VVHFIVy1Cd0Vvakc0ZGs0bFd0OW5Gc280dUFwZGRocXZzSTFZM2x0SjhVZkZMdU1ITWJvNzRkbDNxUjctNWJWeVlGNjdrd1Y5VTNFTUo3YlpTVV9uZ195UGhVUWhucmtMdk83WTRjZXRmOU83VG1IVVc0bTJ0Rlo5aDNQWFpFVDlOVlMzMTBndUVVNUdnM1hpb3V4VHlXSm5POUpxaGNlTl9YZlk5M3g3bTJ0M3dGY194cnEwX3dRVWFVRzNKWGtIVV9RaE1LZy1MNGU4VE1QV2pER0VEYWk3NmVGTTVKTUdWV2kzYk0xN09ibnI2SGhvVDNTNUF3VHdVcEFJS3E5VjI5ejNjbWc4N1hURzZkUG5RVk5DNnhqMzNfV0sxOHUzQnpqSERQR2NzU0kxejVOSE5kZ2VEYng3M0l4U3BQUXg2WWlMelp5N2F2cjNWSzFkWEh6X3hqV2oyYW9MOXh2MHVraW9YMVQwWnFiZGo4M0ZnZm91TDNHQW9OMUc5Q0llZmUydVBUNHJHcWQzMFRqUWY3N0VFNEktUFNMY0dCWnNxV0lmYUp4NGM1b0NZS0Z0OUNjQXktRUh4UWgzQk1MM0JvWjR6LXQ0cTZjSElTUUZ4YVFpQVVZTFFxbVhUVjhfanlGUkRhX0kzQ0hDMlNKWHpjNzY5dFlhSl96QlVqdnp4N3p4ZUpoM0ZmRXZzVUtvai1MSDk2RWpQa1Q2UUJuZFBYVUZXWlRNV1RBdlU1S3NQM1B5Z2NQalU4ejJHbVZ1Z0s5SHo3RnhDcEZzY2NUeHhkS0ZMcl9EX3Nvd1FMOGxfeWw0Zm04S2dlajQ4cFU4RzhoamJIQ25ybjlqcFkxWC13R3hrNzVDclBtdXpvZXEyWEMyWjVOSU5xeDgtaE5NWW1NSGZXbUNVVTRuWUlfeEU1UlRKZ2l2WlI4ODlEUTlnbW0yalJDeWdraVNWLVJSZFc2V0h6UjBBaGpoMHU0MUZEN1NaalVWWmJJR0pWUXVJQVkyWXF6ajJZbHcwWmZ2cWF2eGUtU0NBSXBvYm5BNG9nSmJxWEtGVWdqaEl6bUVrajd0VWJvblFmbUlzclZadmlFTzlLVHRpQWpKRUF1NW1oMTlNRU94WUI3ekUtOWZHa1c5WXdjQlRpUGt3RGtKZkJJa2VpVFAzVElwNllpZXNiYVFwWVQyVE4tY0ZJc1l1cS1GNFRvRjlvcWtlY3EyQWVacEhqWUFOX3VNclpiZ2NxWkNrVkZkMUJyTHU0U0Jka1dnMGtUNnE4U1R4MVR1Q1BXb3lscmhpcm1vTG5KWVZDNGs2X0VHR1E5cnc9PQ==",
       "accounts_count": 4,
       "synced_at": "2026-06-11T21:17:36.064481"
-    },
-    {
-      "id": 5,
-      "license_key": "W1RS-9NNH-LVFK-XQAP",
-      "hardware_id": "f619862ce54296768891ddfd3b1ce6470c8e9cb120fb0b8f20a8db27bc727d90",
-      "encrypted_data": "Z0FBQUFBQnFWbXg2YVctOXdWNXM5SUkxOUdmejdxcEs2LUZtWkRyeDVxUmF4Y2U1VkNDTDlCaTNLZUV1NmtIeS1UekNkVFNBUE56aWZIbXJHMkdDVVc1cVRLRC15SE90ZlNFM3IyRjZZT0VDYWhNcUZ0Z1RaZGxjMEhnWmNwMjRXbTNjUS1aUE9pdzk5c2l1QlBRQnJnQjZhRlJCV3JkbDU1ck8yNkpySk8zVlFZdTJZdFUzdVBwWWZlLXFEOHFqQW5SdXZsRy12NEU1emNHNW9EWFZmeTZmMXcyOGJMbUVBRGtnRlluZG9waGdXc0h0eHpsemRBdW8xci02U2lmVU1jaUNJeUV2a1BFS04tTDNjR1NvMVlEejVCT1JhM0NRVGtxdE9tOGVRM0lXb01VaFBjaGdsNGJOMjVCd29zVXkxUVJ2WGVZVmRYR0pMYzltZVhwMEdLb3Q3cHYyS0t3V0VEa0htdmIzUnZpbUNZUDI5T1pNZzZvNDJnSWROT2hrSmVfei12VmpXbmpkWWN2LUVhcFdvTEZoVmNjaVg2cVdxOXNWZjhGc19NNHcybEtnN1ZkZEdhdz0=",
-      "accounts_count": 1,
-      "synced_at": "2026-07-14T17:06:02.355731"
     }
   ],
   "activity_log": [
     {
-      "id": 42,
-      "license_key": "W1RS-9NNH-LVFK-XQAP",
-      "action": "sync_success",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-14T17:06:02.364204",
-      "details": "1 accounts"
-    },
-    {
-      "id": 41,
-      "license_key": "W1RS-9NNH-LVFK-XQAP",
-      "action": "activate_success",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-14T17:05:59.847012",
-      "details": "HW: f619862ce5429676..."
-    },
-    {
-      "id": 40,
-      "license_key": "W1RS-9NNH-LVFK-XQAP",
+      "id": 16,
+      "license_key": "OMDK-O0RH-NQEX-19U9",
       "action": "created_via_api",
       "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-14T17:05:10.505525",
+      "timestamp": "2026-07-14T17:17:22.760481",
       "details": "License created from Admin Panel Desktop"
     },
     {
-      "id": 39,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "verify_failed",
+      "id": 15,
+      "license_key": "W1RS-9NNH-LVFK-XQAP",
+      "action": "activate_failed",
       "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-14T17:04:51.658055",
+      "timestamp": "2026-07-14T17:17:17.250380",
       "details": "License not found"
     },
     {
-      "id": 38,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-13T09:16:56.094794",
-      "details": "Invalid license"
-    },
-    {
-      "id": 37,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-13T08:16:55.475448",
-      "details": "Invalid license"
-    },
-    {
-      "id": 36,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-13T07:16:54.875247",
-      "details": "Invalid license"
-    },
-    {
-      "id": 35,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-13T06:16:54.213532",
-      "details": "Invalid license"
-    },
-    {
-      "id": 34,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-13T05:16:53.575609",
-      "details": "Invalid license"
-    },
-    {
-      "id": 33,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-13T04:16:52.971822",
-      "details": "Invalid license"
-    },
-    {
-      "id": 32,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-13T03:16:52.353412",
-      "details": "Invalid license"
-    },
-    {
-      "id": 31,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-13T02:16:51.752175",
-      "details": "Invalid license"
-    },
-    {
-      "id": 30,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-13T01:16:51.122915",
-      "details": "Invalid license"
-    },
-    {
-      "id": 29,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-13T00:16:50.528523",
-      "details": "Invalid license"
-    },
-    {
-      "id": 28,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T23:16:49.898872",
-      "details": "Invalid license"
-    },
-    {
-      "id": 27,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T22:16:49.291351",
-      "details": "Invalid license"
-    },
-    {
-      "id": 26,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T21:16:48.628763",
-      "details": "Invalid license"
-    },
-    {
-      "id": 25,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T20:16:47.975431",
-      "details": "Invalid license"
-    },
-    {
-      "id": 24,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T19:16:46.806889",
-      "details": "Invalid license"
-    },
-    {
-      "id": 23,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T18:16:46.194651",
-      "details": "Invalid license"
-    },
-    {
-      "id": 22,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T17:16:45.183286",
-      "details": "Invalid license"
-    },
-    {
-      "id": 21,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T16:16:44.274332",
-      "details": "Invalid license"
-    },
-    {
-      "id": 20,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T15:16:43.666982",
-      "details": "Invalid license"
-    },
-    {
-      "id": 19,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T14:16:43.043295",
-      "details": "Invalid license"
-    },
-    {
-      "id": 18,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T13:16:42.307239",
-      "details": "Invalid license"
-    },
-    {
-      "id": 17,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T12:16:41.648047",
-      "details": "Invalid license"
-    },
-    {
-      "id": 16,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T11:16:41.034901",
-      "details": "Invalid license"
-    },
-    {
-      "id": 15,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T10:16:40.299750",
-      "details": "Invalid license"
-    },
-    {
       "id": 14,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
-      "action": "sync_failed",
+      "license_key": "W1RS-9NNH-LVFK-XQAP",
+      "action": "verify_failed",
       "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T09:16:39.681700",
-      "details": "Invalid license"
+      "timestamp": "2026-07-14T17:16:58.402298",
+      "details": "License not found"
     },
     {
       "id": 13,
-      "license_key": "DH3S-REGV-KAVH-1RG6",
+      "license_key": "W1RS-9NNH-LVFK-XQAP",
       "action": "sync_failed",
       "ip_address": "127.0.0.1",
-      "timestamp": "2026-07-12T08:16:39.002818",
+      "timestamp": "2026-07-14T17:10:42.161477",
       "details": "Invalid license"
     },
     {
