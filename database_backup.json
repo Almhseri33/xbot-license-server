@@ -1,5 +1,5 @@
 {
-  "backup_date": "2026-07-14T17:17:37.630367",
+  "backup_date": "2026-07-14T17:17:55.507119",
   "licenses": [
     {
       "id": 1,
@@ -66,9 +66,25 @@
       "encrypted_data": "Z0FBQUFBQnFWbTh4VEVDZ0V4aXpTdVU2WlNnelFkVF85NEZoTFNoQWh5Tm9YelZjWDVrV2FNQzhualIwTDE2UWVkc0Q4X3ZyZkxKcHl1Q194ODNSZGtURGJHSC1sRFIxdndyU043ZlRpWnlnRzNMY2drdk5fVFIyT2wzenh4Zm40LWh0UVMyQlJJX3MtMDFYNkMwRGdKUWZ0SUU0dXZFakFYRHNRRHdPV2dhS3lTRWYzRm96TE1MWDZpSzF3YWwzVVJzRGFSWHYtMnBja2lHcm84cE1SeGwyczVVRkJONFRWVW0wUGk2Nk14aWlEQlBDeXBsVHU5SFpvMU1GeFJMVjdpU1hlVTZCOGp5cDI3cDhUNG51Vm1MVVN3cklpajhIVjNyOE9EWDdzeEJVQi1QT2JLS0JmdUdUek5ZZlhRaWRqVUtNVm5rLTdtVjROWTlfQVlGcVpFSmMxbjhJS2VzOXZuczZ1NENXSXJfN3lISWZoeGxpMzFoNVMydm9zV2lRMVdfOVZPcDdvQ25admNadUpqWk5rTmRIckJkekEzdXZobTEybGtVVHpZRVd6eWl5bTM3TnFTZz0=",
       "accounts_count": 1,
       "synced_at": "2026-07-14T17:17:37.615718"
+    },
+    {
+      "id": 6,
+      "license_key": "OMDK-O0RH-NQEX-19U9",
+      "hardware_id": "f619862ce54296768891ddfd3b1ce6470c8e9cb120fb0b8f20a8db27bc727d90",
+      "encrypted_data": "Z0FBQUFBQnFWbTlEMTZtTGdDNXhwcjRQcGZMeFg0dlQxa3FuS20tSUlCdFdzZHNScWRFaVkwTHpSUk1fTGlMaEZZZmFVVlNVWGRTbk5VdlR4ekdXWnpfZWphbGpRSDhwWXJsU2xwWmg5ZDRpVC1TZDhxZ082OXRvWmVVQ2NiTnkzQTZGT29oWk9IS1YyV290UGt4UVpETnJTTlFUSEpvYi1ocWJBWWdMZjdJQ0JyRGcxN0J4QzJtU044LTA2R1c2TS1USjdYdl9Zem5ueE1WMW43eC1peDRobUxFeUlkR3FZQmdkaWlyZldISzZiQzloVHlQdDdBQkpfLXVGRjdxQllFME1ETzFERkJ2UF9NTUVTYVZPZFZYb3dnb0sxTUVCcEM1YjI1aXNsd2M1VWF4NVgtUzRMOUJtcGFuSTZYUEk3eXFucGJxT2VhQ1VQOUczeXAzTlItRWhRcFd3TC14WmRuRGxpTDhjai11Qm9idWVCaWpyQmp2cnNudVg0ZkdXOGI3UWJpbHY5M2k4N2sxeEdFNEh6WFBoZks4Skk0SEdKSzNCNGxnbW1yTWw3c2NlN28zLUdCND0=",
+      "accounts_count": 1,
+      "synced_at": "2026-07-14T17:17:55.494447"
     }
   ],
   "activity_log": [
+    {
+      "id": 19,
+      "license_key": "OMDK-O0RH-NQEX-19U9",
+      "action": "sync_success",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-07-14T17:17:55.500659",
+      "details": "1 accounts"
+    },
     {
       "id": 18,
       "license_key": "OMDK-O0RH-NQEX-19U9",
